@@ -1,0 +1,30 @@
+#version: "3.8"
+services:
+  service:
+    image: apzda/${SERVICE_NAME}-server:latest
+    build:
+      context: ${SERVICE_NAME}-server/target
+      dockerfile: ../Dockerfile
+      args:
+        - SERVICE_NAME=${SERVICE_NAME}-service
+        - SERVICE_VER=${SERVICE_VER}
+        - SERVICE_JAR=${SERVICE_NAME}-server-layer.jar
+    environment:
+      - "JAVA_OPTS=-Xms256M -Xmx512M"
+      - "SPRING_PROFILES_ACTIVE=flyway,docker"
+      - "SPRING_DATA_REDIS_PASSWORD=Abc12332!"
+    pull_policy: never
+    networks:
+      - apzda
+    restart: no
+    healthcheck:
+      test: [ "CMD-SHELL","wget -q -O - localhost:8080/actuator/health | grep -q UP" ]
+      interval: 1s
+      timeout: 1s
+      retries: 3
+      start_interval: 1s
+      start_period: 30s
+
+networks:
+  apzda:
+    external: true

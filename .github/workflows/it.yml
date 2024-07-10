@@ -1,0 +1,98 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        java: [ '17','21' ]
+    services:
+      nameserver:
+        image: apache/rocketmq:5.1.4
+        ports:
+          - "9876:9876"
+        command:
+          - /home/rocketmq/rocketmq-5.1.4/bin/mqnamesrv
+      broker:
+        image: apache/rocketmq:5.1.4
+        depends_on:
+          - nameserver
+        ports:
+          - "10909:10909"
+          - "10911:10911"
+        command:
+          - /home/rocketmq/rocketmq-5.1.4/bin/mqbroker
+          - "-n nameserver:9876"
+          - "-bc /home/rocketmq/rocketmq-5.1.4/conf/broker.conf"
+          - "--enable-proxy"
+      mysql:
+        image: mysql:8.0.35
+        ports:
+          - 3307:3306
+        env:
+          MYSQL_ROOT_PASSWORD: Abc12332!
+          MYSQL_DATABASE: apzda_messenger_dev_db
+    env:
+      SERVER_PORT_NO: 38083
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+          cache: maven
+      - name: Build with Maven
+        run: mvn -B -P+it clean package -Dskip.container=yes -Djava.version=${{ matrix.java }} --file pom.xml
+  deploy:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    needs: [ "build" ]
+    runs-on: ubuntu-22.04
+    env:
+      MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+      MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+      GPG_SECURITY_PWD: ${{ secrets.GPG_SECURITY_PWD }}
+    steps:
+      - name: Install gpg secret key
+        run: |-
+          # Install gpg secret key
+          cat <(echo -e "${{ secrets.GPG_SECURITY_KEY }}") | gpg --batch --import
+          # Verify gpg secret key
+          gpg --list-secret-keys --keyid-format LONG
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: 'temurin'
+          cache: maven
+      - name: Set up maven settings
+        uses: s4u/maven-settings-action@v3.0.0
+        with:
+          servers: |
+            [{
+              "id": "ossrh",
+              "username": "${{ secrets.OSSRH_USERNAME }}",
+              "password": "${{ secrets.OSSRH_TOKEN }}"
+            }]
+      - name: Deploy to OSSRH
+        run: mvn -P+deploy -Djava.version=17 -DskipTests=true clean deploy
