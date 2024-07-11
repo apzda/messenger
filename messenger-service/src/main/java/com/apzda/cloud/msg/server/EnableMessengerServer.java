@@ -14,23 +14,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.apzda.cloud.msg.config;
+package com.apzda.cloud.msg.server;
 
-import lombok.Data;
-import org.apache.rocketmq.spring.autoconfigure.RocketMQProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.apzda.cloud.msg.config.MessengerServiceConfig;
+import org.springframework.context.annotation.Import;
+
+import java.lang.annotation.*;
 
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-@Data
-@ConfigurationProperties(prefix = "apzda.cloud.messenger")
-public class MessengerClientProperties {
-
-    private String topic = "MESSENGER_MAILBOX";
-
-    private RocketMQProperties.Producer producer = new RocketMQProperties.Producer();
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Import(MessengerServiceConfig.class)
+public @interface EnableMessengerServer {
 
 }

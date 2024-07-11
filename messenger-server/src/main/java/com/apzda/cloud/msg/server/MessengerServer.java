@@ -25,6 +25,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @since 1.0.0
  **/
 @SpringBootApplication
+@EnableMessengerServer
 public class MessengerServer {
 
     public static void main(String[] args) {

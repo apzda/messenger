@@ -33,10 +33,10 @@ public class MailboxTrans {
     private String id;
 
     @TableField(fill = FieldFill.INSERT)
-    private Long createAt;
+    private Long createdAt;
 
     @TableField(fill = FieldFill.UPDATE)
-    private Long updateAt;
+    private Long updatedAt;
 
     private String mailId;
 

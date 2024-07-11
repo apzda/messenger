@@ -25,4 +25,6 @@ public interface Messenger {
 
     void send(Mail mail);
 
+    void send(Mail mail, int timeout);
+
 }

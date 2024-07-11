@@ -21,22 +21,22 @@ jobs:
         java: [ '17','21' ]
     services:
       nameserver:
-        image: apache/rocketmq:5.1.4
+        image: apzda/rocketmq:5.1.1
         ports:
           - "9876:9876"
         command:
-          - /home/rocketmq/rocketmq-5.1.4/bin/mqnamesrv
+          - /home/rocketmq/rocketmq-5.1.1/bin/mqnamesrv
       broker:
-        image: apache/rocketmq:5.1.4
+        image: apzda/rocketmq:5.1.1
         depends_on:
           - nameserver
         ports:
           - "10909:10909"
           - "10911:10911"
         command:
-          - /home/rocketmq/rocketmq-5.1.4/bin/mqbroker
+          - /home/rocketmq/rocketmq-5.1.1/bin/mqbroker
           - "-n nameserver:9876"
-          - "-bc /home/rocketmq/rocketmq-5.1.4/conf/broker.conf"
+          - "-bc /home/rocketmq/rocketmq-5.1.1/conf/broker.conf"
           - "--enable-proxy"
       mysql:
         image: mysql:8.0.35
@@ -46,7 +46,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: Abc12332!
           MYSQL_DATABASE: apzda_messenger_dev_db
     env:
-      SERVER_PORT_NO: 38083
+      SERVER_PORT_NO: 38908
     steps:
       - name: Checkout
         uses: actions/checkout@v4

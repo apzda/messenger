@@ -27,10 +27,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  **/
 @Data
 @ConfigurationProperties(prefix = "apzda.cloud.messenger")
-public class MessengerClientProperties {
+public class MessengerServiceProperties {
 
-    private String topic = "MESSENGER_MAILBOX";
-
-    private RocketMQProperties.Producer producer = new RocketMQProperties.Producer();
+    private RocketMQProperties.PushConsumer consumer = new RocketMQProperties.PushConsumer();
 
 }

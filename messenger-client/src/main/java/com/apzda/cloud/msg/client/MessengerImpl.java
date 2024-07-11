@@ -19,10 +19,8 @@ package com.apzda.cloud.msg.client;
 import com.apzda.cloud.msg.Mail;
 import com.apzda.cloud.msg.Messenger;
 import com.apzda.cloud.msg.config.MessengerClientProperties;
-import com.apzda.cloud.msg.domain.entity.MailboxTrans;
 import com.apzda.cloud.msg.domain.service.IMailboxTransService;
-import com.apzda.cloud.msg.domain.vo.MailStatus;
-import com.apzda.cloud.msg.mq.MessengerTransactionListener;
+import com.apzda.cloud.msg.listener.MessengerTransactionListener;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
@@ -33,10 +31,10 @@ import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.spring.autoconfigure.RocketMQProperties;
 import org.apache.rocketmq.spring.support.RocketMQUtil;
 import org.springframework.util.Assert;
-import org.springframework.util.DigestUtils;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
 import static org.apache.rocketmq.client.producer.SendStatus.SEND_OK;
@@ -51,15 +49,13 @@ public class MessengerImpl implements Messenger {
 
     private final TransactionMQProducer producer;
 
-    private final IMailboxTransService mailboxService;
-
     private final String topic;
 
     public MessengerImpl(MessengerClientProperties properties, RocketMQProperties mqProperties,
-            IMailboxTransService mailboxService) throws MQClientException {
-        this.mailboxService = mailboxService;
+            IMailboxTransService mailboxService, Duration transactionTimeout) throws MQClientException {
         this.producer = createTransactionMQProducer(properties, mqProperties);
-        this.producer.setTransactionListener(new MessengerTransactionListener(mailboxService));
+        this.producer
+            .setTransactionListener(new MessengerTransactionListener(mailboxService, transactionTimeout.toMillis()));
         this.topic = properties.getTopic();
         Assert.hasText(topic, "[apzda.cloud.messenger.topic] must not be null");
         this.producer.start();
@@ -67,29 +63,28 @@ public class MessengerImpl implements Messenger {
 
     @Override
     public void send(Mail mail) {
+        send(mail, -1);
+    }
+
+    @Override
+    public void send(Mail mail, int timeout) {
         try {
             val sender = mail.getSender();
             Assert.hasText(sender, "sender must not be null");
             val content = mail.getContent();
             Assert.hasText(content, "content must not be null");
             val message = new Message(topic, sender, content.getBytes(StandardCharsets.UTF_8));
-            val result = this.producer.sendMessageInTransaction(message, null);
+            if (timeout >= 0) {
+                message.putUserProperty("timeout", String.valueOf(timeout));
+            }
+            val result = this.producer.sendMessageInTransaction(message, mail);
             if (result == null) {
                 throw new RuntimeException("Can't send mail: " + mail);
             }
             else if (SEND_OK != result.getSendStatus()) {
                 throw new RuntimeException(result.getSendStatus().name());
             }
-            val transactionId = DigestUtils.md5DigestAsHex(result.getTransactionId().getBytes(StandardCharsets.UTF_8));
-            val mailbox = new MailboxTrans();
-            mailbox.setId(transactionId);
-            mailbox.setSender(sender);
-            mailbox.setMailId(mail.getId());
-            mailbox.setStatus(MailStatus.SENT);
-            mailbox.setContent(content);
-            if (!mailboxService.save(mailbox)) {
-                throw new RuntimeException("Cannot not save mail to mailbox: " + mail);
-            }
+            log.error("Mail sent successfully: {}", mail);
         }
         catch (MQClientException e) {
             throw new RuntimeException(e);
@@ -99,7 +94,10 @@ public class MessengerImpl implements Messenger {
     @PreDestroy
     void stop() {
         try {
+            val nameServer = this.producer.getNamesrvAddr();
+            val groupName = this.producer.getProducerGroup();
             this.producer.shutdown();
+            log.info("a producer used by Messenger ({}) disconnect from namesrv {}", groupName, nameServer);
         }
         catch (Exception ignore) {
         }
@@ -110,10 +108,6 @@ public class MessengerImpl implements Messenger {
         RocketMQProperties.Producer producerConfig = properties.getProducer();
         String nameServer = rocketMQProperties.getNameServer();
         val defaultProducerCfg = rocketMQProperties.getProducer();
-
-        if (producerConfig == null) {
-            producerConfig = defaultProducerCfg;
-        }
 
         String groupName = defaultIfBlank(producerConfig.getGroup(), defaultProducerCfg.getGroup());
         Assert.hasText(nameServer, "[rocketmq.name-server] must not be null");
@@ -147,7 +141,7 @@ public class MessengerImpl implements Messenger {
         }
         producer
             .setInstanceName(defaultIfBlank(producerConfig.getInstanceName(), defaultProducerCfg.getInstanceName()));
-        log.info("a producer ({}) init on namesrv {}", groupName, nameServer);
+        log.info("a producer used by Messenger ({}) init on namesrv {}", groupName, nameServer);
         return producer;
     }
 

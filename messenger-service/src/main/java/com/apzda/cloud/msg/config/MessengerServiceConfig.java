@@ -16,21 +16,21 @@
  */
 package com.apzda.cloud.msg.config;
 
-import lombok.Data;
 import org.apache.rocketmq.spring.autoconfigure.RocketMQProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-@Data
-@ConfigurationProperties(prefix = "apzda.cloud.messenger")
-public class MessengerClientProperties {
+@Configuration(proxyBeanMethods = false)
+@ComponentScan({ "com.apzda.cloud.msg.consumer", "com.apzda.cloud.msg.service" })
+@EnableConfigurationProperties(MessengerServiceProperties.class)
+public class MessengerServiceConfig {
 
-    private String topic = "MESSENGER_MAILBOX";
 
-    private RocketMQProperties.Producer producer = new RocketMQProperties.Producer();
 
 }
