@@ -26,8 +26,6 @@ jobs:
           - "9876:9876"
       broker:
         image: apzda/rocketmq-bk:5.1.1
-        depends_on:
-          - nameserver
         ports:
           - "10909:10909"
           - "10911:10911"
