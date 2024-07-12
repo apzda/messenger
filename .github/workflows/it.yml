@@ -21,23 +21,19 @@ jobs:
         java: [ '17','21' ]
     services:
       nameserver:
-        image: apzda/rocketmq:5.1.1
+        image: apzda/rocketmq-ns:5.1.1
         ports:
           - "9876:9876"
-        command:
-          - /home/rocketmq/rocketmq-5.1.1/bin/mqnamesrv
       broker:
-        image: apzda/rocketmq:5.1.1
+        image: apzda/rocketmq-bk:5.1.1
         depends_on:
           - nameserver
         ports:
           - "10909:10909"
           - "10911:10911"
-        command:
-          - /home/rocketmq/rocketmq-5.1.1/bin/mqbroker
-          - "-n nameserver:9876"
-          - "-bc /home/rocketmq/rocketmq-5.1.1/conf/broker.conf"
-          - "--enable-proxy"
+        environment:
+          - NAME_SRV=localhost:9876
+          - BROKER_IP=localhost
       mysql:
         image: mysql:8.0.35
         ports:
