@@ -16,15 +16,24 @@
  */
 package com.apzda.cloud.msg;
 
-import jakarta.annotation.Nonnull;
-
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-public interface Messenger {
+public class TextMail extends Mail<String> {
 
-    void send(@Nonnull Mail<?> mail);
+    public TextMail(String id, String postman, String content) {
+        super(id, postman, content);
+    }
+
+    public TextMail(String id, String postman, String title, String service, String content) {
+        super(id, postman, title, service, content);
+    }
+
+    @Override
+    public String getBody() {
+        return getContent();
+    }
 
 }

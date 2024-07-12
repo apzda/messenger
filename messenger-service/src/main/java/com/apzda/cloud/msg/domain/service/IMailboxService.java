@@ -14,15 +14,22 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.apzda.cloud.msg.domain.vo;
+package com.apzda.cloud.msg.domain.service;
+
+import com.apzda.cloud.msg.domain.entity.Mailbox;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-public enum MailStatus {
+public interface IMailboxService extends IService<Mailbox> {
 
-    PENDING, SENDING, SENT, FAIL
+    Mailbox getByPostmanAndMsgId(String postman, String msgId);
+
+    void markSuccess(Mailbox mailbox);
+
+    void markFailure(Mailbox mailbox, String error);
 
 }

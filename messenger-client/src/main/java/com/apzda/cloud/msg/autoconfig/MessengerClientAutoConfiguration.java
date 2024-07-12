@@ -20,20 +20,18 @@ import com.apzda.cloud.gsvc.config.EnableGsvcServices;
 import com.apzda.cloud.msg.Messenger;
 import com.apzda.cloud.msg.client.MessengerImpl;
 import com.apzda.cloud.msg.config.MessengerClientProperties;
+import com.apzda.cloud.msg.config.PostmanConfigProperties;
 import com.apzda.cloud.msg.domain.service.IMailboxTransService;
 import com.apzda.cloud.msg.proto.MessengerService;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.spring.autoconfigure.RocketMQAutoConfiguration;
 import org.apache.rocketmq.spring.autoconfigure.RocketMQProperties;
 import org.mybatis.spring.annotation.MapperScan;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-
-import java.time.Duration;
 
 /**
  * @author fengz (windywany@gmail.com)
@@ -45,16 +43,13 @@ import java.time.Duration;
 @ComponentScan({ "com.apzda.cloud.msg.domain.service" })
 @MapperScan("com.apzda.cloud.msg.domain.mapper")
 @ConditionalOnClass(RocketMQAutoConfiguration.class)
-@EnableConfigurationProperties(MessengerClientProperties.class)
+@EnableConfigurationProperties({ MessengerClientProperties.class, PostmanConfigProperties.class })
 public class MessengerClientAutoConfiguration {
 
-    @Value("${spring.transaction.default-timeout:-1}")
-    private Duration defaultTransactionTimeout;
-
     @Bean
-    Messenger messengerImpl(MessengerClientProperties properties, RocketMQProperties mqProperties,
-            IMailboxTransService mailboxService) throws MQClientException {
-        return new MessengerImpl(properties, mqProperties, mailboxService, defaultTransactionTimeout);
+    Messenger messengerImpl(MessengerClientProperties properties, PostmanConfigProperties postmanConfigProperties,
+            RocketMQProperties mqProperties, IMailboxTransService mailboxService) throws MQClientException {
+        return new MessengerImpl(properties, postmanConfigProperties, mqProperties, mailboxService);
     }
 
 }

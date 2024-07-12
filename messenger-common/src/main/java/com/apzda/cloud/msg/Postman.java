@@ -16,11 +16,18 @@
  */
 package com.apzda.cloud.msg;
 
+import jakarta.annotation.Nonnull;
+
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-public interface Postman {
+public interface Postman<T> {
+
+    boolean deliver(@Nonnull Mail<T> message);
+
+    @Nonnull
+    Mail<T> encapsulate(String id, String postman, String content);
 
 }

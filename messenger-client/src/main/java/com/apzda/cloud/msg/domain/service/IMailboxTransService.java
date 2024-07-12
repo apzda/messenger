@@ -17,7 +17,11 @@
 package com.apzda.cloud.msg.domain.service;
 
 import com.apzda.cloud.msg.domain.entity.MailboxTrans;
+import com.apzda.cloud.msg.domain.vo.MailStatus;
 import com.baomidou.mybatisplus.extension.service.IService;
+import jakarta.annotation.Nonnull;
+
+import java.util.List;
 
 /**
  * @author fengz (windywany@gmail.com)
@@ -25,5 +29,16 @@ import com.baomidou.mybatisplus.extension.service.IService;
  * @since 1.0.0
  **/
 public interface IMailboxTransService extends IService<MailboxTrans> {
+
+    MailboxTrans getByStatus(MailStatus mailStatus);
+
+    boolean updateStatus(MailboxTrans mailboxTrans, MailStatus fromStatus);
+
+    boolean resetStatusByTransId(String transId, MailStatus toStatus);
+
+    @Nonnull
+    List<MailboxTrans> listByMailId(String id);
+
+    boolean removeByTransId(String transactionId);
 
 }

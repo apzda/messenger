@@ -25,12 +25,12 @@ import lombok.Data;
  * @version 1.0.0
  * @since 1.0.0
  **/
-@TableName("apzda_mailbox_trans")
 @Data
+@TableName("apzda_mailbox_trans")
 public class MailboxTrans {
 
-    @TableId(type = IdType.ASSIGN_ID)
-    private String id;
+    @TableId(type = IdType.AUTO)
+    private Long id;
 
     @TableField(fill = FieldFill.INSERT)
     private Long createdAt;
@@ -38,12 +38,24 @@ public class MailboxTrans {
     @TableField(fill = FieldFill.UPDATE)
     private Long updatedAt;
 
+    private Long nextRetryAt;
+
     private String mailId;
+
+    private String transId;
+
+    private String title;
+
+    private String service;
 
     private MailStatus status;
 
-    private String sender;
+    private String postman;
 
     private String content;
+
+    private Integer retries;
+
+    private String remark;
 
 }

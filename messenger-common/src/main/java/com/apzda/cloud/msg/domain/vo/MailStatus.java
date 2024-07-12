@@ -14,17 +14,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.apzda.cloud.msg;
-
-import jakarta.annotation.Nonnull;
+package com.apzda.cloud.msg.domain.vo;
 
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-public interface Messenger {
+public enum MailStatus {
 
-    void send(@Nonnull Mail<?> mail);
+    PENDING, SENDING, SENT, FAIL, RETRYING
 
 }

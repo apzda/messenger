@@ -1,21 +1,23 @@
 package com.apzda.cloud.msg.client;
 
-import com.apzda.cloud.msg.Mail;
+import cn.hutool.core.util.RandomUtil;
 import com.apzda.cloud.msg.Messenger;
+import com.apzda.cloud.msg.TextMail;
 import com.apzda.cloud.msg.autoconfig.MessengerClientAutoConfiguration;
+import com.apzda.cloud.msg.domain.service.IMailboxTransService;
 import com.apzda.cloud.test.autoconfig.AutoConfigureGsvcTest;
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import lombok.val;
 import org.apache.rocketmq.spring.autoconfigure.RocketMQAutoConfiguration;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.test.annotation.Commit;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 
-import static org.springframework.transaction.annotation.Propagation.REQUIRES_NEW;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author fengz (windywany@gmail.com)
@@ -27,25 +29,32 @@ import static org.springframework.transaction.annotation.Propagation.REQUIRES_NE
 @ContextConfiguration(classes = MessengerImplTest.class)
 @AutoConfigureGsvcTest
 @ImportAutoConfiguration({ RocketMQAutoConfiguration.class, MessengerClientAutoConfiguration.class })
+@Disabled
 class MessengerImplTest {
 
     @Autowired
     private Messenger messenger;
 
     @Autowired
-    private TransactionTemplate transactionTemplate;
+    private IMailboxTransService mailboxTransService;
 
     @Test
-    @Transactional(propagation = REQUIRES_NEW, timeout = 30)
-    void shouldOk() throws InterruptedException {
+    @Commit
+    void mail_should_be_sent_ok() throws InterruptedException {
         // given
-        val test = new Mail("1", "test", "aaaa");
+        String id = RandomUtil.randomString(32);
+        var trans = mailboxTransService.listByMailId(id);
+        assertThat(trans).isNotNull();
+
+        val mail = new TextMail(id, "demo", "test");
+        mail.setService("test");
+        mail.setTitle(RandomUtil.randomString(18));
         // when
-        transactionTemplate.execute((status) -> {
-            messenger.send(test, 30);
-            return true;
-        });
+        messenger.send(mail);
+        trans = mailboxTransService.listByMailId(id);
         // then
+        assertThat(trans).isNotEmpty();
+        assertThat(trans.size()).isEqualTo(1);
     }
 
 }

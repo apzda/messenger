@@ -14,17 +14,42 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.apzda.cloud.msg;
+package com.apzda.cloud.msg.domain.entity;
 
-import jakarta.annotation.Nonnull;
+import com.apzda.cloud.msg.domain.vo.MailStatus;
+import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
 
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-public interface Messenger {
+@Data
+@TableName("apzda_mailbox_deliver")
+public class Deliver {
 
-    void send(@Nonnull Mail<?> mail);
+    @TableId(type = IdType.AUTO)
+    private Long id;
+
+    @TableField(fill = FieldFill.INSERT)
+    private Long createdAt;
+
+    private String createdBy;
+
+    @TableField(fill = FieldFill.UPDATE)
+    private Long updatedAt;
+
+    private String updatedBy;
+
+    private Long deliveredAt;
+
+    private Long mailboxId;
+
+    private MailStatus status;
+
+    private Integer retries;
+
+    private String remark;
 
 }

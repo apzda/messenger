@@ -19,8 +19,14 @@ package com.apzda.cloud.msg.domain.service.impl;
 import com.apzda.cloud.msg.domain.entity.MailboxTrans;
 import com.apzda.cloud.msg.domain.mapper.MailboxTransMapper;
 import com.apzda.cloud.msg.domain.service.IMailboxTransService;
+import com.apzda.cloud.msg.domain.vo.MailStatus;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import jakarta.annotation.Nonnull;
+import lombok.val;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * @author fengz (windywany@gmail.com)
@@ -30,5 +36,49 @@ import org.springframework.stereotype.Service;
 @Service
 public class MailboxTransServiceImpl extends ServiceImpl<MailboxTransMapper, MailboxTrans>
         implements IMailboxTransService {
+
+    @Override
+    public MailboxTrans getByStatus(MailStatus mailStatus) {
+        val con = Wrappers.lambdaQuery(MailboxTrans.class);
+        con.eq(MailboxTrans::getStatus, mailStatus);
+        con.orderByAsc(MailboxTrans::getCreatedAt);
+        con.last("LIMIT 1");
+        return getOne(con);
+    }
+
+    @Override
+    public boolean updateStatus(MailboxTrans mailboxTrans, MailStatus fromStatus) {
+        val con = Wrappers.lambdaUpdate(MailboxTrans.class);
+        con.eq(MailboxTrans::getStatus, fromStatus);
+        con.eq(MailboxTrans::getId, mailboxTrans.getId());
+
+        return update(mailboxTrans, con);
+    }
+
+    @Override
+    public boolean resetStatusByTransId(String transId, MailStatus toStatus) {
+        val set = Wrappers.lambdaUpdate(MailboxTrans.class);
+        set.set(MailboxTrans::getStatus, toStatus);
+        set.eq(MailboxTrans::getTransId, transId);
+
+        return update(set);
+    }
+
+    @Nonnull
+    @Override
+    public List<MailboxTrans> listByMailId(String id) {
+        val con = Wrappers.lambdaQuery(MailboxTrans.class);
+        con.eq(MailboxTrans::getMailId, id);
+        con.orderByAsc(MailboxTrans::getCreatedAt);
+        return list(con);
+    }
+
+    @Override
+    public boolean removeByTransId(String transId) {
+        val con = Wrappers.lambdaQuery(MailboxTrans.class);
+        con.eq(MailboxTrans::getTransId, transId);
+
+        return remove(con);
+    }
 
 }

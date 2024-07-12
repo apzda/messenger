@@ -14,17 +14,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.apzda.cloud.msg;
+package com.apzda.cloud.msg.domain.mapper;
 
-import jakarta.annotation.Nonnull;
+import com.apzda.cloud.msg.domain.entity.Deliver;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-public interface Messenger {
-
-    void send(@Nonnull Mail<?> mail);
+@Mapper
+public interface DeliverMapper extends BaseMapper<Deliver> {
 
 }

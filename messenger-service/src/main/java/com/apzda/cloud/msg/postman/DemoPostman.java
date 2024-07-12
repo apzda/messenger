@@ -14,17 +14,32 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.apzda.cloud.msg;
+package com.apzda.cloud.msg.postman;
 
+import com.apzda.cloud.msg.Mail;
+import com.apzda.cloud.msg.Postman;
+import com.apzda.cloud.msg.TextMail;
 import jakarta.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-public interface Messenger {
+@Slf4j
+public class DemoPostman implements Postman<String> {
 
-    void send(@Nonnull Mail<?> mail);
+    @Override
+    public boolean deliver(@Nonnull Mail<String> message) {
+        log.info("Mail Delivered: {}", message);
+        return true;
+    }
+
+    @Nonnull
+    @Override
+    public Mail<String> encapsulate(String id, String postman, String content) {
+        return new TextMail(id, postman, content);
+    }
 
 }

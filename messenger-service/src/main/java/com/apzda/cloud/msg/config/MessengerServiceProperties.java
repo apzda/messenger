@@ -17,8 +17,10 @@
 package com.apzda.cloud.msg.config;
 
 import lombok.Data;
-import org.apache.rocketmq.spring.autoconfigure.RocketMQProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+import java.time.Duration;
+import java.util.List;
 
 /**
  * @author fengz (windywany@gmail.com)
@@ -26,9 +28,31 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @since 1.0.0
  **/
 @Data
-@ConfigurationProperties(prefix = "apzda.cloud.messenger")
+@ConfigurationProperties(prefix = "apzda.cloud.messenger.consumer")
 public class MessengerServiceProperties {
 
-    private RocketMQProperties.PushConsumer consumer = new RocketMQProperties.PushConsumer();
+    private boolean demoEnabled = true;
+
+    private String group = "MAILBOX_CONSUMER";
+
+    private String namespace;
+
+    private String instanceName;
+
+    private int maxReconsumeTimes = -1;
+
+    private int consumeThreadMin = 20;
+
+    private int consumeThreadMax = 20;
+
+    private int consumeTimeout = 15;
+
+    private int clientApiTimeout = 3 * 1000;
+
+    private List<Duration> retires = List.of(Duration.ofSeconds(10), Duration.ofSeconds(30), Duration.ofMinutes(1),
+            Duration.ofMinutes(2), Duration.ofMinutes(3), Duration.ofMinutes(4), Duration.ofMinutes(5),
+            Duration.ofMinutes(6), Duration.ofMinutes(7), Duration.ofMinutes(8), Duration.ofMinutes(9),
+            Duration.ofMinutes(10), Duration.ofMinutes(20), Duration.ofMinutes(30), Duration.ofHours(1),
+            Duration.ofHours(2));
 
 }

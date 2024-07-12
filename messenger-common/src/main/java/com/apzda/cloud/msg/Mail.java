@@ -18,7 +18,9 @@ package com.apzda.cloud.msg;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+
+import java.util.UUID;
 
 /**
  * @author fengz (windywany@gmail.com)
@@ -27,18 +29,36 @@ import lombok.NoArgsConstructor;
  **/
 @Data
 @AllArgsConstructor
-@NoArgsConstructor
-public class Mail {
+public abstract class Mail<T> {
 
-    private String id;
+    protected String id;
 
-    private String sender;
+    protected String postman;
 
-    private String content;
+    protected String title;
+
+    protected String service;
+
+    protected String content;
+
+    public Mail(String id, String postman, String content) {
+        this.id = id;
+        this.postman = postman;
+        this.content = content;
+    }
+
+    public abstract T getBody();
 
     @Override
     public String toString() {
-        return "[" + sender + "] id = " + id + ", content = " + content;
+        return "[" + postman + "] id = " + getId() + ", content = " + content;
+    }
+
+    public String getId() {
+        if (StringUtils.isBlank(id)) {
+            id = UUID.randomUUID().toString();
+        }
+        return id;
     }
 
 }
