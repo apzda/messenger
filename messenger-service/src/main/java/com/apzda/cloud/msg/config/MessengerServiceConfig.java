@@ -30,7 +30,7 @@ import org.springframework.context.annotation.Configuration;
  * @since 1.0.0
  **/
 @Configuration(proxyBeanMethods = false)
-@ComponentScan({ "com.apzda.cloud.msg.consumer", "com.apzda.cloud.msg.service" })
+@ComponentScan({ "com.apzda.cloud.msg.consumer", "com.apzda.cloud.msg.service", "com.apzda.cloud.msg.converter" })
 @EnableConfigurationProperties(MessengerServiceProperties.class)
 public class MessengerServiceConfig {
 

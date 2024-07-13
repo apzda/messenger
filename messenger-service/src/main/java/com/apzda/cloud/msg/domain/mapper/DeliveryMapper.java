@@ -16,7 +16,7 @@
  */
 package com.apzda.cloud.msg.domain.mapper;
 
-import com.apzda.cloud.msg.domain.entity.Deliver;
+import com.apzda.cloud.msg.domain.entity.Delivery;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -26,6 +26,6 @@ import org.apache.ibatis.annotations.Mapper;
  * @since 1.0.0
  **/
 @Mapper
-public interface DeliverMapper extends BaseMapper<Deliver> {
+public interface DeliveryMapper extends BaseMapper<Delivery> {
 
 }

@@ -9,13 +9,13 @@ import com.apzda.cloud.test.autoconfig.AutoConfigureGsvcTest;
 import com.baomidou.mybatisplus.test.autoconfigure.MybatisPlusTest;
 import lombok.val;
 import org.apache.rocketmq.spring.autoconfigure.RocketMQAutoConfiguration;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.test.annotation.Commit;
 import org.springframework.test.context.ContextConfiguration;
+
+import java.time.Clock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,8 +29,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ContextConfiguration(classes = MessengerImplTest.class)
 @AutoConfigureGsvcTest
 @ImportAutoConfiguration({ RocketMQAutoConfiguration.class, MessengerClientAutoConfiguration.class })
-@Disabled
 class MessengerImplTest {
+
+    @Autowired
+    private Clock clock;
 
     @Autowired
     private Messenger messenger;
@@ -39,9 +41,7 @@ class MessengerImplTest {
     private IMailboxTransService mailboxTransService;
 
     @Test
-    @Commit
-    void mail_should_be_sent_ok() throws InterruptedException {
-        // given
+    void mail_should_be_sent_ok() {
         String id = RandomUtil.randomString(32);
         var trans = mailboxTransService.listByMailId(id);
         assertThat(trans).isNotNull();

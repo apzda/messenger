@@ -20,33 +20,28 @@ import cn.hutool.core.exceptions.ExceptionUtil;
 import com.apzda.cloud.msg.Mail;
 import com.apzda.cloud.msg.Messenger;
 import com.apzda.cloud.msg.config.MessengerClientProperties;
-import com.apzda.cloud.msg.config.PostmanConfigProperties;
 import com.apzda.cloud.msg.domain.entity.MailboxTrans;
 import com.apzda.cloud.msg.domain.service.IMailboxTransService;
 import com.apzda.cloud.msg.domain.vo.MailStatus;
-import com.apzda.cloud.msg.listener.MessengerTransactionListener;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
-import org.apache.rocketmq.client.AccessChannel;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.TransactionMQProducer;
 import org.apache.rocketmq.common.message.Message;
-import org.apache.rocketmq.spring.autoconfigure.RocketMQProperties;
-import org.apache.rocketmq.spring.support.RocketMQUtil;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
 import static org.apache.rocketmq.client.producer.SendStatus.SEND_OK;
 
 /**
@@ -61,9 +56,9 @@ public class MessengerImpl implements Messenger, InitializingBean {
 
     private final IMailboxTransService mailboxService;
 
-    private final MessengerClientProperties properties;
+    private final Clock clock;
 
-    private final PostmanConfigProperties postmanConfig;
+    private final MessengerClientProperties properties;
 
     private final String topic;
 
@@ -71,17 +66,15 @@ public class MessengerImpl implements Messenger, InitializingBean {
 
     private final AtomicInteger atomicInteger = new AtomicInteger(0);
 
-    public MessengerImpl(MessengerClientProperties properties, PostmanConfigProperties postmanConfig,
-            RocketMQProperties mqProperties, IMailboxTransService mailboxService) throws MQClientException {
+    public MessengerImpl(MessengerClientProperties properties, ObjectProvider<TransactionMQProducer> provider,
+            IMailboxTransService mailboxService, Clock clock) throws MQClientException {
         this.properties = properties;
-        this.postmanConfig = postmanConfig;
         this.mailboxService = mailboxService;
-        this.producer = createTransactionMQProducer(properties, mqProperties);
-        this.producer.setTransactionListener(new MessengerTransactionListener(mailboxService));
+        this.clock = clock;
+        this.producer = provider.getIfAvailable();
         this.topic = properties.getTopic();
         Assert.hasText(topic, "[apzda.cloud.messenger.producer.topic] must not be null");
-        this.producer.start();
-        val executorCount = postmanConfig.getExecutorCount();
+        val executorCount = properties.getExecutorCount();
         executor = new ScheduledThreadPoolExecutor(
                 executorCount < 1 ? Math.max(1, Runtime.getRuntime().availableProcessors() / 4) : executorCount, r -> {
                     val thread = new Thread(r);
@@ -93,14 +86,16 @@ public class MessengerImpl implements Messenger, InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        val executorCount = executor.getCorePoolSize();
-        val delay = postmanConfig.getDelay().toSeconds();
-        val period = postmanConfig.getPeriod().toSeconds();
-        for (int i = 0; i < executorCount; i++) {
-            executor.scheduleAtFixedRate(new MailSender(producer, mailboxService, topic, postmanConfig),
-                    delay > 0 ? delay : 10, period > 0 ? period : 1, TimeUnit.SECONDS);
+        if (this.producer != null) {
+            val executorCount = executor.getCorePoolSize();
+            val delay = properties.getDelay().toSeconds();
+            val period = properties.getPeriod().toSeconds();
+            for (int i = 0; i < executorCount; i++) {
+                executor.scheduleAtFixedRate(new MailSender(producer, mailboxService, topic, properties, clock),
+                        delay > 0 ? delay : 10, period > 0 ? period : 1, TimeUnit.SECONDS);
+            }
+            log.info("Messenger executor init: count={}, delay={}, period={} ", executorCount, delay, period);
         }
-        log.info("Messenger executor init: count={}, delay={}, period={} ", executorCount, delay, period);
     }
 
     @Override
@@ -116,89 +111,45 @@ public class MessengerImpl implements Messenger, InitializingBean {
         mailbox.setContent(content);
         mailbox.setService(mail.getService());
         mailbox.setTitle(mail.getTitle());
-
+        mailbox.setNextRetryAt(clock.millis());
+        mailbox.setRetries(0);
         if (!mailboxService.save(mailbox)) {
-            throw new RuntimeException("the mail cannot save into mailbox" + mail);
+            throw new RuntimeException("The mail cannot save into mailbox: " + mail);
         }
     }
 
     @PreDestroy
     void stop() {
-        val nameServer = this.producer.getNamesrvAddr();
-        val groupName = this.producer.getProducerGroup();
-        try {
-            this.producer.shutdown();
-            log.info("a producer used by Messenger ({}) disconnect from namesrv {}", groupName, nameServer);
-        }
-        catch (Exception e) {
-            log.warn("a producer used by Messenger ({}) did not disconnect from namesrv {} correctly", groupName,
-                    nameServer);
-        }
-
         try {
             executor.shutdown();
             if (executor.awaitTermination(90, TimeUnit.SECONDS)) {
-                log.info("Messenger executor shutdown!");
+                log.info("Shutdown Messenger executor successfully!");
             }
             else {
-                log.warn("Shutdown executor timeout: 90s");
+                log.warn("Shutdown Messenger executor timeout: 90s");
             }
         }
         catch (Exception e) {
-            log.warn("cannot shutdown executor: {}", e.getMessage());
+            log.warn("Cannot shutdown Messenger executor: {}", e.getMessage());
         }
-    }
-
-    @Nonnull
-    private static TransactionMQProducer createTransactionMQProducer(MessengerClientProperties properties,
-            @Nonnull RocketMQProperties rocketMQProperties) {
-        RocketMQProperties.Producer producerConfig = rocketMQProperties.getProducer();
-        String nameServer = rocketMQProperties.getNameServer();
-        String groupName = defaultIfBlank(properties.getGroup(), producerConfig.getGroup());
-        Assert.hasText(nameServer, "[rocketmq.name-server] must not be null");
-        Assert.hasText(groupName, "[apzda.cloud.messenger.producer.group] must not be null");
-
-        String accessChannel = rocketMQProperties.getAccessChannel();
-
-        String ak = producerConfig.getAccessKey();
-        String sk = producerConfig.getSecretKey();
-        boolean isEnableMsgTrace = producerConfig.isEnableMsgTrace();
-        String customizedTraceTopic = producerConfig.getCustomizedTraceTopic();
-
-        TransactionMQProducer producer = (TransactionMQProducer) RocketMQUtil.createDefaultMQProducer(groupName, ak, sk,
-                isEnableMsgTrace, customizedTraceTopic);
-
-        producer.setNamesrvAddr(nameServer);
-        if (StringUtils.hasLength(accessChannel)) {
-            producer.setAccessChannel(AccessChannel.valueOf(accessChannel));
-        }
-        producer.setSendMsgTimeout(producerConfig.getSendMessageTimeout());
-        producer.setRetryTimesWhenSendFailed(producerConfig.getRetryTimesWhenSendFailed());
-        producer.setRetryTimesWhenSendAsyncFailed(producerConfig.getRetryTimesWhenSendAsyncFailed());
-        producer.setMaxMessageSize(producerConfig.getMaxMessageSize());
-        producer.setCompressMsgBodyOverHowmuch(producerConfig.getCompressMessageBodyThreshold());
-        producer.setRetryAnotherBrokerWhenNotStoreOK(producerConfig.isRetryNextServer());
-        producer.setUseTLS(producerConfig.isTlsEnable());
-        val namespaces = defaultIfBlank(properties.getNamespace(), producerConfig.getNamespace());
-        if (StringUtils.hasText(namespaces)) {
-            producer.setNamespace(namespaces);
-        }
-        producer.setInstanceName(defaultIfBlank(properties.getInstanceName(), producerConfig.getInstanceName()));
-        log.info("a producer used by Messenger ({}) init on namesrv {}", groupName, nameServer);
-        return producer;
     }
 
     @Slf4j
     private record MailSender(TransactionMQProducer producer, IMailboxTransService mailboxService, String topic,
-            PostmanConfigProperties postmanConfig) implements Runnable {
+            MessengerClientProperties postmanConfig, Clock clock) implements Runnable {
 
         @Override
         public void run() {
             MailboxTrans trans;
             do {
-                trans = mailboxService.getByStatus(MailStatus.PENDING);
+                trans = mailboxService.getByStatusAndNextRetryAtLe(MailStatus.PENDING, clock.millis());
                 if (trans != null) {
                     try {
+                        trans.setStatus(MailStatus.SENDING);
+                        if (!mailboxService.updateStatus(trans, MailStatus.PENDING)) {
+                            continue;
+                        }
+
                         val postman = trans.getPostman();
                         Assert.hasText(postman, "postman must not be null");
                         val content = trans.getContent();
@@ -207,11 +158,6 @@ public class MessengerImpl implements Messenger, InitializingBean {
                         message.putUserProperty("msgId", trans.getMailId());
                         message.putUserProperty("title", trans.getTitle());
                         message.putUserProperty("service", trans.getService());
-
-                        trans.setStatus(MailStatus.SENDING);
-                        if (!mailboxService.updateStatus(trans, MailStatus.PENDING)) {
-                            continue;
-                        }
 
                         val result = this.producer.sendMessageInTransaction(message, trans);
                         if (result == null) {
@@ -224,7 +170,17 @@ public class MessengerImpl implements Messenger, InitializingBean {
                     }
                     catch (Exception e) {
                         val message = ExceptionUtil.getSimpleMessage(ExceptionUtil.getRootCause(e));
-                        trans.setStatus(MailStatus.PENDING);
+                        val retries = postmanConfig.getRetries();
+                        val currentRetry = trans.getRetries();
+                        if (retries.size() >= (currentRetry + 1)) {
+                            trans.setStatus(MailStatus.PENDING);
+                            trans.setRetries(currentRetry + 1);
+                            val duration = retries.get(currentRetry);
+                            trans.setNextRetryAt(trans.getNextRetryAt() + duration.toMillis());
+                        }
+                        else {
+                            trans.setStatus(MailStatus.FAIL);
+                        }
                         trans.setRemark(message);
                         mailboxService.updateStatus(trans, MailStatus.SENDING);
                         log.warn("Cannot send mail: {} - {}", trans, message);

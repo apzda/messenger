@@ -16,7 +16,11 @@
  */
 package com.apzda.cloud.msg.domain.service;
 
+import com.apzda.cloud.msg.domain.entity.Delivery;
 import com.apzda.cloud.msg.domain.entity.Mailbox;
+import com.apzda.cloud.msg.domain.vo.MailStatus;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
@@ -28,8 +32,18 @@ public interface IMailboxService extends IService<Mailbox> {
 
     Mailbox getByPostmanAndMsgId(String postman, String msgId);
 
+    Mailbox getByMsgId(String msgId);
+
+    Mailbox getByStatusAndNextRetryAtLe(MailStatus mailStatus, long nextRetryAt);
+
     void markSuccess(Mailbox mailbox);
 
     void markFailure(Mailbox mailbox, String error);
+
+    boolean updateStatus(Mailbox mailbox, MailStatus fromStatus);
+
+    boolean resend(Mailbox mailbox);
+
+    IPage<Delivery> deliveries(IPage<Delivery> page, Wrapper<Delivery> wrapper);
 
 }

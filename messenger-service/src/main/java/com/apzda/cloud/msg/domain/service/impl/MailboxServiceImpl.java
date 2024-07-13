@@ -16,17 +16,23 @@
  */
 package com.apzda.cloud.msg.domain.service.impl;
 
-import com.apzda.cloud.msg.domain.entity.Deliver;
+import com.apzda.cloud.msg.config.MessengerServiceProperties;
+import com.apzda.cloud.msg.domain.entity.Delivery;
 import com.apzda.cloud.msg.domain.entity.Mailbox;
-import com.apzda.cloud.msg.domain.mapper.DeliverMapper;
+import com.apzda.cloud.msg.domain.mapper.DeliveryMapper;
 import com.apzda.cloud.msg.domain.mapper.MailboxMapper;
 import com.apzda.cloud.msg.domain.service.IMailboxService;
 import com.apzda.cloud.msg.domain.vo.MailStatus;
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.val;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+
+import java.time.Clock;
 
 /**
  * @author fengz (windywany@gmail.com)
@@ -37,9 +43,15 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MailboxServiceImpl extends ServiceImpl<MailboxMapper, Mailbox> implements IMailboxService {
 
+    private final Clock clock;
+
+    private final TransactionTemplate transactionTemplate;
+
     private final MailboxMapper mailboxMapper;
 
-    private final DeliverMapper deliverMapper;
+    private final DeliveryMapper deliveryMapper;
+
+    private final MessengerServiceProperties properties;
 
     @Override
     public Mailbox getByPostmanAndMsgId(String postman, String msgId) {
@@ -47,40 +59,102 @@ public class MailboxServiceImpl extends ServiceImpl<MailboxMapper, Mailbox> impl
     }
 
     @Override
-    @Transactional
-    public void markSuccess(Mailbox mailbox) {
-        mailbox.setDeliveredAt(System.currentTimeMillis());
-        mailbox.setStatus(MailStatus.SENT);
-        mailbox.setRemark("");
-        if (updateById(mailbox)) {
-            val deliver = new Deliver();
-            deliver.setDeliveredAt(mailbox.getDeliveredAt());
-            deliver.setMailboxId(mailbox.getId());
-            deliver.setStatus(MailStatus.SENT);
-            deliverMapper.insert(deliver);
-        }
-        else {
-            throw new IllegalStateException("Cannot update mailbox status to SENT: " + mailbox.getMsgId());
-        }
+    public Mailbox getByMsgId(String msgId) {
+        return mailboxMapper.getByMsgId(msgId);
     }
 
     @Override
-    @Transactional
+    public Mailbox getByStatusAndNextRetryAtLe(MailStatus mailStatus, long nextRetryAt) {
+        val con = Wrappers.lambdaQuery(Mailbox.class);
+        con.eq(Mailbox::getStatus, mailStatus);
+        con.le(Mailbox::getNextRetryAt, nextRetryAt);
+        con.orderByAsc(Mailbox::getNextRetryAt);
+        con.last("LIMIT 1");
+
+        return getOne(con);
+    }
+
+    @Override
+    public void markSuccess(Mailbox mailbox) {
+        transactionTemplate.execute(status -> {
+            mailbox.setDeliveredAt(clock.millis());
+            mailbox.setStatus(MailStatus.SENT);
+            mailbox.setRemark("");
+            if (updateById(mailbox)) {
+                val deliver = new Delivery();
+                deliver.setDeliveredAt(mailbox.getDeliveredAt());
+                deliver.setMailboxId(mailbox.getId());
+                deliver.setStatus(MailStatus.SENT);
+                deliveryMapper.insert(deliver);
+            }
+            else {
+                status.setRollbackOnly();
+                throw new IllegalStateException("Cannot update mailbox status to SENT: " + mailbox.getMsgId());
+            }
+            return true;
+        });
+    }
+
+    @Override
+
     public void markFailure(Mailbox mailbox, String error) {
-        mailbox.setDeliveredAt(System.currentTimeMillis());
-        mailbox.setStatus(MailStatus.FAIL);
-        mailbox.setRemark(error);
-        if (updateById(mailbox)) {
-            val deliver = new Deliver();
-            deliver.setDeliveredAt(mailbox.getDeliveredAt());
-            deliver.setMailboxId(mailbox.getId());
-            deliver.setStatus(MailStatus.FAIL);
-            deliver.setRemark(error);
-            deliverMapper.insert(deliver);
-        }
-        else {
-            throw new IllegalStateException("Cannot update mailbox status to FAIL: " + mailbox.getMsgId());
-        }
+        transactionTemplate.execute(status -> {
+            mailbox.setDeliveredAt(clock.millis());
+            mailbox.setRemark(error);
+            // retries
+            val retries = properties.getRetries();
+            val currentRetry = mailbox.getRetries();
+            if (retries.size() >= currentRetry + 1) {
+                val duration = retries.get(currentRetry);
+                mailbox.setRetries(currentRetry + 1);
+                mailbox.setNextRetryAt(mailbox.getDeliveredAt() + duration.toMillis());
+                mailbox.setStatus(MailStatus.RETRYING);
+            }
+            else {
+                mailbox.setStatus(MailStatus.FAIL);
+            }
+
+            if (updateById(mailbox)) {
+                val deliver = new Delivery();
+                deliver.setDeliveredAt(mailbox.getDeliveredAt());
+                deliver.setMailboxId(mailbox.getId());
+                deliver.setStatus(MailStatus.FAIL);
+                deliver.setRetries(currentRetry);
+                deliver.setRemark(error);
+                deliveryMapper.insert(deliver);
+            }
+            else {
+                status.setRollbackOnly();
+                throw new IllegalStateException("Cannot update mailbox status to FAIL: " + mailbox.getMsgId());
+            }
+            return true;
+        });
+
+    }
+
+    @Override
+    public boolean updateStatus(Mailbox mailbox, MailStatus fromStatus) {
+        val con = Wrappers.lambdaUpdate(Mailbox.class);
+        con.eq(Mailbox::getStatus, fromStatus);
+        con.eq(Mailbox::getId, mailbox.getId());
+
+        return update(mailbox, con);
+    }
+
+    @Override
+    public boolean resend(Mailbox mailbox) {
+        val status = mailbox.getStatus();
+        mailbox.setStatus(MailStatus.PENDING);
+        mailbox.setNextRetryAt(clock.millis());
+        mailbox.setRetries(0);
+        mailbox.setRemark("");
+
+        return updateStatus(mailbox, status);
+    }
+
+    @Override
+    public IPage<Delivery> deliveries(IPage<Delivery> page, Wrapper<Delivery> wrapper) {
+        return deliveryMapper.selectPage(page, wrapper);
     }
 
 }

@@ -19,14 +19,19 @@ package com.apzda.cloud.msg.config;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
+import java.util.List;
+
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
 @Data
-@ConfigurationProperties(prefix = "apzda.cloud.messenger.producer")
+@ConfigurationProperties(prefix = "apzda.cloud.messenger")
 public class MessengerClientProperties {
+
+    private boolean enabled = true;
 
     private String topic = "MESSENGER_MAILBOX";
 
@@ -35,5 +40,17 @@ public class MessengerClientProperties {
     private String namespace;
 
     private String instanceName;
+
+    private int executorCount = 1;
+
+    private Duration delay = Duration.ofSeconds(30);
+
+    private Duration period = Duration.ofSeconds(1);
+
+    private List<Duration> retries = List.of(Duration.ofSeconds(10), Duration.ofSeconds(30), Duration.ofMinutes(1),
+            Duration.ofMinutes(2), Duration.ofMinutes(3), Duration.ofMinutes(4), Duration.ofMinutes(5),
+            Duration.ofMinutes(6), Duration.ofMinutes(7), Duration.ofMinutes(8), Duration.ofMinutes(9),
+            Duration.ofMinutes(10), Duration.ofMinutes(20), Duration.ofMinutes(30), Duration.ofHours(1),
+            Duration.ofHours(2));
 
 }

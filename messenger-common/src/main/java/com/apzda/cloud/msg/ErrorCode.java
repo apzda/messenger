@@ -14,26 +14,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.apzda.cloud.msg.domain.mapper;
-
-import com.apzda.cloud.msg.domain.entity.Mailbox;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+package com.apzda.cloud.msg;
 
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-@Mapper
-public interface MailboxMapper extends BaseMapper<Mailbox> {
+public interface ErrorCode {
 
-    @Select("SELECT * FROM apzda_mailbox WHERE postman = #{postman} and msg_id = #{msgId}")
-    Mailbox getByPostmanAndMsgId(@Param("postman") String postman, @Param("msgId") String msgId);
+    int MSG_ID_REQUIRED = 908001;
 
-    @Select("SELECT * FROM apzda_mailbox WHERE msg_id = #{msgId}")
-    Mailbox getByMsgId(@Param("msgId") String msgId);
+    int MSG_NOT_FOUND = 908002;
+
+    int MSG_CANNOT_RESEND = 908003;
 
 }

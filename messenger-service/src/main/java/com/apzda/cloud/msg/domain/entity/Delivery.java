@@ -26,8 +26,8 @@ import lombok.Data;
  * @since 1.0.0
  **/
 @Data
-@TableName("apzda_mailbox_deliver")
-public class Deliver {
+@TableName("apzda_mailbox_delivery")
+public class Delivery {
 
     @TableId(type = IdType.AUTO)
     private Long id;
@@ -35,11 +35,13 @@ public class Deliver {
     @TableField(fill = FieldFill.INSERT)
     private Long createdAt;
 
+    @TableField(fill = FieldFill.INSERT)
     private String createdBy;
 
     @TableField(fill = FieldFill.UPDATE)
     private Long updatedAt;
 
+    @TableField(fill = FieldFill.UPDATE)
     private String updatedBy;
 
     private Long deliveredAt;

@@ -28,8 +28,10 @@ import java.util.List;
  * @since 1.0.0
  **/
 @Data
-@ConfigurationProperties(prefix = "apzda.cloud.messenger.consumer")
+@ConfigurationProperties(prefix = "apzda.cloud.postman")
 public class MessengerServiceProperties {
+
+    private boolean enabled = true;
 
     private boolean demoEnabled = true;
 
@@ -49,7 +51,13 @@ public class MessengerServiceProperties {
 
     private int clientApiTimeout = 3 * 1000;
 
-    private List<Duration> retires = List.of(Duration.ofSeconds(10), Duration.ofSeconds(30), Duration.ofMinutes(1),
+    private int executorCount = 1;
+
+    private Duration delay = Duration.ofSeconds(30);
+
+    private Duration period = Duration.ofSeconds(1);
+
+    private List<Duration> retries = List.of(Duration.ofSeconds(10), Duration.ofSeconds(30), Duration.ofMinutes(1),
             Duration.ofMinutes(2), Duration.ofMinutes(3), Duration.ofMinutes(4), Duration.ofMinutes(5),
             Duration.ofMinutes(6), Duration.ofMinutes(7), Duration.ofMinutes(8), Duration.ofMinutes(9),
             Duration.ofMinutes(10), Duration.ofMinutes(20), Duration.ofMinutes(30), Duration.ofHours(1),

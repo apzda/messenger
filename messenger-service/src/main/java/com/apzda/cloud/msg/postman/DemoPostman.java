@@ -33,7 +33,7 @@ public class DemoPostman implements Postman<String> {
     @Override
     public boolean deliver(@Nonnull Mail<String> message) {
         log.info("Mail Delivered: {}", message);
-        return true;
+        return false;
     }
 
     @Nonnull

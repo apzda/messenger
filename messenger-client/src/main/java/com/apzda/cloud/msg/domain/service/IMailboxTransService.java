@@ -30,11 +30,9 @@ import java.util.List;
  **/
 public interface IMailboxTransService extends IService<MailboxTrans> {
 
-    MailboxTrans getByStatus(MailStatus mailStatus);
+    MailboxTrans getByStatusAndNextRetryAtLe(MailStatus mailStatus, long nextRetryAt);
 
     boolean updateStatus(MailboxTrans mailboxTrans, MailStatus fromStatus);
-
-    boolean resetStatusByTransId(String transId, MailStatus toStatus);
 
     @Nonnull
     List<MailboxTrans> listByMailId(String id);

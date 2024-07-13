@@ -23,6 +23,7 @@ import com.apzda.cloud.msg.domain.vo.MailStatus;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import jakarta.annotation.Nonnull;
+import lombok.RequiredArgsConstructor;
 import lombok.val;
 import org.springframework.stereotype.Service;
 
@@ -34,15 +35,18 @@ import java.util.List;
  * @since 1.0.0
  **/
 @Service
+@RequiredArgsConstructor
 public class MailboxTransServiceImpl extends ServiceImpl<MailboxTransMapper, MailboxTrans>
         implements IMailboxTransService {
 
     @Override
-    public MailboxTrans getByStatus(MailStatus mailStatus) {
+    public MailboxTrans getByStatusAndNextRetryAtLe(MailStatus mailStatus, long nextRetryAt) {
         val con = Wrappers.lambdaQuery(MailboxTrans.class);
         con.eq(MailboxTrans::getStatus, mailStatus);
-        con.orderByAsc(MailboxTrans::getCreatedAt);
+        con.le(MailboxTrans::getNextRetryAt, nextRetryAt);
+        con.orderByAsc(MailboxTrans::getNextRetryAt);
         con.last("LIMIT 1");
+
         return getOne(con);
     }
 
@@ -53,15 +57,6 @@ public class MailboxTransServiceImpl extends ServiceImpl<MailboxTransMapper, Mai
         con.eq(MailboxTrans::getId, mailboxTrans.getId());
 
         return update(mailboxTrans, con);
-    }
-
-    @Override
-    public boolean resetStatusByTransId(String transId, MailStatus toStatus) {
-        val set = Wrappers.lambdaUpdate(MailboxTrans.class);
-        set.set(MailboxTrans::getStatus, toStatus);
-        set.eq(MailboxTrans::getTransId, transId);
-
-        return update(set);
     }
 
     @Nonnull

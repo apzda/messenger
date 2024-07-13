@@ -41,18 +41,22 @@ public class MessengerTransactionListener implements TransactionListener {
 
     @Override
     public LocalTransactionState executeLocalTransaction(@Nonnull Message message, Object o) {
+        val transId = message.getTransactionId();
         val mail = (MailboxTrans) o;
         mail.setStatus(MailStatus.SENT);
-        mail.setTransId(message.getTransactionId());
+        mail.setTransId(transId);
 
         if (mailboxService.updateStatus(mail, MailStatus.SENDING)) {
+            mailboxService.removeByTransId(transId);
             return LocalTransactionState.COMMIT_MESSAGE;
         }
+
         return LocalTransactionState.UNKNOW;
     }
 
     @Override
     public LocalTransactionState checkLocalTransaction(@Nonnull MessageExt message) {
+        // 理论上到不了这里.
         if (mailboxService.removeByTransId(message.getTransactionId())) {
             return LocalTransactionState.COMMIT_MESSAGE;
         }
