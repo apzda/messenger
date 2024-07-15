@@ -18,6 +18,7 @@ package com.apzda.cloud.msg;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.UUID;
@@ -29,23 +30,20 @@ import java.util.UUID;
  **/
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public abstract class Mail<T> {
 
     protected String id;
 
     protected String postman;
 
+    protected String recipients;
+
     protected String title;
 
     protected String service;
 
     protected String content;
-
-    public Mail(String id, String postman, String content) {
-        this.id = id;
-        this.postman = postman;
-        this.content = content;
-    }
 
     public abstract T getBody();
 

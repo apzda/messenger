@@ -14,52 +14,31 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.apzda.cloud.msg.domain.entity;
+package com.apzda.cloud.msg.mq;
 
-import com.apzda.cloud.msg.domain.vo.MailStatus;
-import com.baomidou.mybatisplus.annotation.*;
-import lombok.Data;
+import org.springframework.messaging.Message;
 
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-@Data
-@TableName("apzda_mailbox_trans")
-public class MailboxTrans {
+public interface RocketMqRateLimiter {
 
-    @TableId(type = IdType.AUTO)
-    private Long id;
+    /**
+     * @param destination formats: `topicName:tags`
+     * @param message 消息
+     */
+    void sendMessage(String destination, Message<byte[]> message);
 
-    @TableField(fill = FieldFill.INSERT)
-    private Long createdAt;
+    /**
+     * @param destination formats: `topicName:tags`
+     * @param message 消息
+     */
+    void asyncSendMessage(String destination, Message<byte[]> message);
 
-    @TableField(fill = FieldFill.UPDATE)
-    private Long updatedAt;
-
-    private Long nextRetryAt;
-
-    private String mailId;
-
-    private String transId;
-
-    private String title;
-
-    private String service;
-
-    private MailStatus status;
-
-    private String postman;
-
-    private String recipients;
-
-    private Long postTime;
-
-    private String content;
-
-    private Integer retries;
-
-    private String remark;
+    default boolean isLimited(String destination) {
+        return false;
+    }
 
 }

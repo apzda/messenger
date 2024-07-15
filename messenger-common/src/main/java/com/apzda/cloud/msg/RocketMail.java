@@ -14,52 +14,42 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.apzda.cloud.msg.domain.entity;
+package com.apzda.cloud.msg;
 
-import com.apzda.cloud.msg.domain.vo.MailStatus;
-import com.baomidou.mybatisplus.annotation.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-@Data
-@TableName("apzda_mailbox_trans")
-public class MailboxTrans {
+@Getter
+public class RocketMail extends Mail<String> {
 
-    @TableId(type = IdType.AUTO)
-    private Long id;
+    private String topic;
 
-    @TableField(fill = FieldFill.INSERT)
-    private Long createdAt;
+    private String tags;
 
-    @TableField(fill = FieldFill.UPDATE)
-    private Long updatedAt;
+    @Override
+    public void setRecipients(String recipients) {
+        super.setRecipients(recipients);
+        val segments = StringUtils.split(recipients, ":");
+        if (segments != null) {
+            if (segments.length > 1) {
+                this.topic = segments[0];
+                this.tags = segments[1];
+            }
+            else if (segments.length == 1) {
+                this.topic = segments[0];
+            }
+        }
+    }
 
-    private Long nextRetryAt;
-
-    private String mailId;
-
-    private String transId;
-
-    private String title;
-
-    private String service;
-
-    private MailStatus status;
-
-    private String postman;
-
-    private String recipients;
-
-    private Long postTime;
-
-    private String content;
-
-    private Integer retries;
-
-    private String remark;
+    @Override
+    public String getBody() {
+        return getContent();
+    }
 
 }

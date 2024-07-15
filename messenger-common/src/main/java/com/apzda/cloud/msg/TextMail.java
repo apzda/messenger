@@ -24,11 +24,9 @@ package com.apzda.cloud.msg;
 public class TextMail extends Mail<String> {
 
     public TextMail(String id, String postman, String content) {
-        super(id, postman, content);
-    }
-
-    public TextMail(String id, String postman, String title, String service, String content) {
-        super(id, postman, title, service, content);
+        this.id = id;
+        this.postman = postman;
+        this.content = content;
     }
 
     @Override

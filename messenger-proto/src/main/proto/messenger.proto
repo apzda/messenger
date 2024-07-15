@@ -24,6 +24,8 @@ message MailboxVo {
   string content = 11;
   uint32 retries = 12;
   string remark = 13;
+  string recipients = 14;
+  uint64 post_time = 15;
 }
 
 message DeliveryVo {

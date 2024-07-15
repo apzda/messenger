@@ -14,52 +14,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-package com.apzda.cloud.msg.domain.entity;
+package com.apzda.cloud.msg.mq;
 
-import com.apzda.cloud.msg.domain.vo.MailStatus;
-import com.baomidou.mybatisplus.annotation.*;
-import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
 
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-@Data
-@TableName("apzda_mailbox_trans")
-public class MailboxTrans {
+@Slf4j
+public class FixedRateLimiter extends AbstractRateLimiter {
 
-    @TableId(type = IdType.AUTO)
-    private Long id;
-
-    @TableField(fill = FieldFill.INSERT)
-    private Long createdAt;
-
-    @TableField(fill = FieldFill.UPDATE)
-    private Long updatedAt;
-
-    private Long nextRetryAt;
-
-    private String mailId;
-
-    private String transId;
-
-    private String title;
-
-    private String service;
-
-    private MailStatus status;
-
-    private String postman;
-
-    private String recipients;
-
-    private Long postTime;
-
-    private String content;
-
-    private Integer retries;
-
-    private String remark;
+    public FixedRateLimiter(RocketMQTemplate mqTemplate, int maxRetry) {
+        super(mqTemplate, maxRetry);
+    }
 
 }

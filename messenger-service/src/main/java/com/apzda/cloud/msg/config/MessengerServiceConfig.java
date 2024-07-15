@@ -17,12 +17,18 @@
 package com.apzda.cloud.msg.config;
 
 import com.apzda.cloud.msg.Postman;
+import com.apzda.cloud.msg.mq.FixedRateLimiter;
+import com.apzda.cloud.msg.mq.RocketMqRateLimiter;
 import com.apzda.cloud.msg.postman.DemoPostman;
+import com.apzda.cloud.msg.postman.RocketMqPostman;
+import org.apache.rocketmq.spring.core.RocketMQTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 
 /**
  * @author fengz (windywany@gmail.com)
@@ -32,13 +38,26 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 @ComponentScan({ "com.apzda.cloud.msg.consumer", "com.apzda.cloud.msg.service", "com.apzda.cloud.msg.converter" })
 @EnableConfigurationProperties(MessengerServiceProperties.class)
+@Import(RedisBasedRateLimiterConfig.class)
 public class MessengerServiceConfig {
 
     @Bean
-    @ConditionalOnProperty(prefix = "apzda.cloud.messenger.consumer", name = "demo-enabled", havingValue = "true",
+    @ConditionalOnProperty(prefix = "apzda.cloud.postman", name = "demo-enabled", havingValue = "true",
             matchIfMissing = true)
     Postman<String> demoPostman() {
         return new DemoPostman();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    RocketMqRateLimiter rocketMqRateLimiter(RocketMQTemplate rocketMQTemplate, MessengerServiceProperties properties) {
+        return new FixedRateLimiter(rocketMQTemplate, properties.getLimitRetry());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(name = "rocketmqPostman")
+    Postman<String> rocketmqPostman(RocketMqRateLimiter rocketMqRateLimiter) {
+        return new RocketMqPostman(rocketMqRateLimiter);
     }
 
 }

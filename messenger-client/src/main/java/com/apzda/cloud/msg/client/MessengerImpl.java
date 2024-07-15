@@ -105,6 +105,9 @@ public class MessengerImpl implements Messenger, InitializingBean {
         Assert.hasText(postman, "postman must not be null");
         val content = mail.getContent();
         Assert.hasText(content, "content must not be null");
+        val recipients = mail.getRecipients();
+        Assert.hasText(content, "recipients must not be null");
+
         val mailbox = new MailboxTrans();
         mailbox.setPostman(postman);
         mailbox.setMailId(mail.getId());
@@ -113,6 +116,9 @@ public class MessengerImpl implements Messenger, InitializingBean {
         mailbox.setTitle(mail.getTitle());
         mailbox.setNextRetryAt(clock.millis());
         mailbox.setRetries(0);
+        mailbox.setPostTime(mailbox.getNextRetryAt());
+        mailbox.setRecipients(recipients);
+
         if (!mailboxService.save(mailbox)) {
             throw new RuntimeException("The mail cannot save into mailbox: " + mail);
         }
@@ -154,11 +160,7 @@ public class MessengerImpl implements Messenger, InitializingBean {
                         Assert.hasText(postman, "postman must not be null");
                         val content = trans.getContent();
                         Assert.hasText(content, "content must not be null");
-                        val message = new Message(topic, postman, content.getBytes(StandardCharsets.UTF_8));
-                        message.putUserProperty("msgId", trans.getMailId());
-                        message.putUserProperty("title", trans.getTitle());
-                        message.putUserProperty("service", trans.getService());
-
+                        val message = createMessage(topic, postman, content, trans);
                         val result = this.producer.sendMessageInTransaction(message, trans);
                         if (result == null) {
                             throw new RuntimeException("Can't send mail: " + trans);
@@ -189,6 +191,17 @@ public class MessengerImpl implements Messenger, InitializingBean {
             }
             while (trans != null);
         }
+    }
+
+    @Nonnull
+    private static Message createMessage(String topic, String postman, String content, MailboxTrans trans) {
+        val message = new Message(topic, postman, content.getBytes(StandardCharsets.UTF_8));
+        message.putUserProperty("msgId", trans.getMailId());
+        message.putUserProperty("title", trans.getTitle());
+        message.putUserProperty("service", trans.getService());
+        message.putUserProperty("recipients", trans.getRecipients());
+        message.putUserProperty("postTime", String.valueOf(trans.getPostTime()));
+        return message;
     }
 
 }

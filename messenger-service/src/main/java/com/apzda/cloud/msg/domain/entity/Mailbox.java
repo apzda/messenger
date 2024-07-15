@@ -52,6 +52,10 @@ public class Mailbox {
 
     private String postman;
 
+    private String recipients;
+
+    private Long postTime;
+
     private String content;
 
     private Integer retries;

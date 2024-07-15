@@ -40,6 +40,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Primary;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -52,7 +53,7 @@ import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
  * @version 1.0.0
  * @since 1.0.0
  **/
-@AutoConfiguration
+@AutoConfiguration(after = RocketMQAutoConfiguration.class)
 @EnableGsvcServices(MessengerService.class)
 @ComponentScan({ "com.apzda.cloud.msg.domain.service" })
 @MapperScan("com.apzda.cloud.msg.domain.mapper")
@@ -62,9 +63,8 @@ import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
 public class MessengerClientAutoConfiguration {
 
     @Bean
-    Messenger messengerImpl(MessengerClientProperties properties, RocketMQProperties mqProperties,
-            IMailboxTransService mailboxService, Clock clock, ObjectProvider<TransactionMQProducer> provider)
-            throws MQClientException {
+    Messenger messengerImpl(MessengerClientProperties properties, IMailboxTransService mailboxService, Clock clock,
+            ObjectProvider<TransactionMQProducer> provider) throws MQClientException {
         return new MessengerImpl(properties, provider, mailboxService, clock);
     }
 
@@ -72,6 +72,7 @@ public class MessengerClientAutoConfiguration {
     @ConditionalOnProperty(prefix = "apzda.cloud.messenger", name = "enabled", havingValue = "true",
             matchIfMissing = true)
     @SuppressWarnings("deprecation")
+    @Primary
     TransactionMQProducer messengerMqProducer(MessengerClientProperties properties,
             RocketMQProperties rocketMQProperties, IMailboxTransService mailboxService) throws MQClientException {
         RocketMQProperties.Producer producerConfig = rocketMQProperties.getProducer();

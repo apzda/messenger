@@ -118,6 +118,8 @@ public class MailboxConsumer implements RocketMQListener<MessageExt>, RocketMQPu
         val msgId = message.getUserProperty("msgId");
         val service = message.getUserProperty("service");
         val title = message.getUserProperty("title");
+        val recipients = message.getUserProperty("recipients");
+        val postTime = message.getUserProperty("postTime");
 
         log.debug("收到消息: postman({}) - msgId({}) - content({})", tags, msgId, StringUtils.truncate(content, 128));
 
@@ -136,6 +138,13 @@ public class MailboxConsumer implements RocketMQListener<MessageExt>, RocketMQPu
         mailbox.setStatus(MailStatus.SENDING);
         mailbox.setRetries(0);
         mailbox.setNextRetryAt(clock.millis());
+        mailbox.setRecipients(recipients);
+        try {
+            mailbox.setPostTime(Long.parseLong(postTime));
+        }
+        catch (Exception ignored) {
+            mailbox.setPostTime(mailbox.getNextRetryAt());
+        }
 
         if (!mailboxService.save(mailbox)) {
             // 利用RocketMQ的重试机制
@@ -196,6 +205,7 @@ public class MailboxConsumer implements RocketMQListener<MessageExt>, RocketMQPu
             mail.setService(service);
             mail.setTitle(title);
             mail.setId(msgId);
+            mail.setRecipients(mailbox.getRecipients());
             if (postman.deliver(mail)) {
                 mailboxService.markSuccess(mailbox);
             }

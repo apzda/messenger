@@ -57,6 +57,10 @@ public class MessengerServiceProperties {
 
     private Duration period = Duration.ofSeconds(1);
 
+    private int limitRetry = 5;
+
+    private int limitRate = -1;
+
     private List<Duration> retries = List.of(Duration.ofSeconds(10), Duration.ofSeconds(30), Duration.ofMinutes(1),
             Duration.ofMinutes(2), Duration.ofMinutes(3), Duration.ofMinutes(4), Duration.ofMinutes(5),
             Duration.ofMinutes(6), Duration.ofMinutes(7), Duration.ofMinutes(8), Duration.ofMinutes(9),
