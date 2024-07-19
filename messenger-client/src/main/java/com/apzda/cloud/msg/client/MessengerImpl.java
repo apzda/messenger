@@ -17,6 +17,7 @@
 package com.apzda.cloud.msg.client;
 
 import cn.hutool.core.exceptions.ExceptionUtil;
+import com.apzda.cloud.msg.IMail;
 import com.apzda.cloud.msg.Mail;
 import com.apzda.cloud.msg.Messenger;
 import com.apzda.cloud.msg.config.MessengerClientProperties;
@@ -100,7 +101,7 @@ public class MessengerImpl implements Messenger, InitializingBean {
 
     @Override
     @Transactional(propagation = Propagation.SUPPORTS)
-    public void send(@Nonnull Mail<?> mail) {
+    public void send(@Nonnull IMail<?> mail) {
         val postman = mail.getPostman();
         Assert.hasText(postman, "postman must not be null");
         val content = mail.getContent();

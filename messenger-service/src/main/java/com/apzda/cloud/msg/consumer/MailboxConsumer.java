@@ -33,10 +33,8 @@ import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.spring.annotation.RocketMQMessageListener;
 import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.apache.rocketmq.spring.core.RocketMQPushConsumerLifecycleListener;
-import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -56,8 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
         consumerGroup = "${apzda.cloud.postman.group:MAILBOX_CONSUMER}")
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "apzda.cloud.postman", name = "enabled", havingValue = "true", matchIfMissing = true)
-public class MailboxConsumer implements RocketMQListener<MessageExt>, RocketMQPushConsumerLifecycleListener,
-        ApplicationContextAware, Runnable {
+public class MailboxConsumer implements RocketMQListener<MessageExt>, RocketMQPushConsumerLifecycleListener, Runnable {
 
     private final MessengerServiceProperties properties;
 
@@ -65,11 +62,11 @@ public class MailboxConsumer implements RocketMQListener<MessageExt>, RocketMQPu
 
     private final Clock clock;
 
+    private final ObjectProvider<Postman<?, ?>> postmanProvider;
+
     private final AtomicInteger atomicInteger = new AtomicInteger(0);
 
     private ScheduledThreadPoolExecutor executor;
-
-    private ApplicationContext applicationContext;
 
     @Override
     public void prepareStart(@Nonnull DefaultMQPushConsumer consumer) {
@@ -107,11 +104,6 @@ public class MailboxConsumer implements RocketMQListener<MessageExt>, RocketMQPu
     }
 
     @Override
-    public void setApplicationContext(@Nonnull ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-    }
-
-    @Override
     public void onMessage(MessageExt message) {
         val tags = message.getTags();
         val content = new String(message.getBody(), StandardCharsets.UTF_8);
@@ -128,7 +120,7 @@ public class MailboxConsumer implements RocketMQListener<MessageExt>, RocketMQPu
             log.trace("忽略已存在的消息: {}", mailbox);
             return;
         }
-        // 保存到数据库
+        // 落库，以便可以重试
         mailbox = new Mailbox();
         mailbox.setContent(content);
         mailbox.setTitle(title);
@@ -190,7 +182,7 @@ public class MailboxConsumer implements RocketMQListener<MessageExt>, RocketMQPu
         }
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private void deliver(@Nonnull Mailbox mailbox) {
         val tags = mailbox.getPostman();
         val msgId = mailbox.getMsgId();
@@ -198,14 +190,28 @@ public class MailboxConsumer implements RocketMQListener<MessageExt>, RocketMQPu
         val title = mailbox.getTitle();
 
         try {
+            val postmanOpt = postmanProvider.stream().filter(pm -> pm.supports(tags)).findFirst();
+            if (postmanOpt.isEmpty()) {
+                try {
+                    mailboxService.markFailure(mailbox, "postman(" + tags + ") not found.");
+                }
+                catch (Exception ie) {
+                    log.warn("Cannot update mailbox status to fail: postman({}) - msgId({}) - {}", tags, msgId,
+                            ExceptionUtil.getSimpleMessage(ExceptionUtil.getRootCause(ie)));
+                }
+                return;
+            }
+
+            val postman = (Postman) postmanOpt.get();
             val content = mailbox.getContent();
-            val postman = applicationContext.getBean(tags + "Postman", Postman.class);
             val mail = postman.encapsulate(msgId, tags, content);
+
             mail.setPostman(tags);
             mail.setService(service);
             mail.setTitle(title);
             mail.setId(msgId);
             mail.setRecipients(mailbox.getRecipients());
+
             if (postman.deliver(mail)) {
                 mailboxService.markSuccess(mailbox);
             }

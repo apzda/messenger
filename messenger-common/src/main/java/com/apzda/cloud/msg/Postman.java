@@ -23,11 +23,13 @@ import jakarta.annotation.Nonnull;
  * @version 1.0.0
  * @since 1.0.0
  **/
-public interface Postman<T> {
+public interface Postman<T, E extends IMail<T>> {
 
-    boolean deliver(@Nonnull Mail<T> message);
+    boolean supports(@Nonnull String postman);
+
+    boolean deliver(@Nonnull E message);
 
     @Nonnull
-    Mail<T> encapsulate(String id, String postman, String content);
+    E encapsulate(String id, String postman, String content);
 
 }

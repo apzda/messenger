@@ -16,7 +16,6 @@
  */
 package com.apzda.cloud.msg.postman;
 
-import com.apzda.cloud.msg.Mail;
 import com.apzda.cloud.msg.Postman;
 import com.apzda.cloud.msg.TextMail;
 import jakarta.annotation.Nonnull;
@@ -28,17 +27,22 @@ import lombok.extern.slf4j.Slf4j;
  * @since 1.0.0
  **/
 @Slf4j
-public class DemoPostman implements Postman<String> {
+public class DemoPostman implements Postman<String, TextMail> {
 
     @Override
-    public boolean deliver(@Nonnull Mail<String> message) {
+    public boolean supports(@Nonnull String postman) {
+        return "demo".equals(postman);
+    }
+
+    @Override
+    public boolean deliver(@Nonnull TextMail message) {
         log.info("Mail Delivered: {}", message);
-        return false;
+        return true;
     }
 
     @Nonnull
     @Override
-    public Mail<String> encapsulate(String id, String postman, String content) {
+    public TextMail encapsulate(String id, String postman, String content) {
         return new TextMail(id, postman, content);
     }
 

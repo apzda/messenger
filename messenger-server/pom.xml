@@ -18,6 +18,11 @@
     <dependencies>
         <dependency>
             <groupId>com.apzda.cloud</groupId>
+            <artifactId>apzda-cloud-gsvc-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.apzda.cloud</groupId>
             <artifactId>messenger-service</artifactId>
         </dependency>
 

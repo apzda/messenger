@@ -25,6 +25,6 @@ import jakarta.annotation.Nonnull;
  **/
 public interface Messenger {
 
-    void send(@Nonnull Mail<?> mail);
+    void send(@Nonnull IMail<?> mail);
 
 }

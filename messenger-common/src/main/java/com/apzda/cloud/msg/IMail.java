@@ -16,45 +16,37 @@
  */
 package com.apzda.cloud.msg;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.apache.commons.lang3.StringUtils;
-
-import java.util.UUID;
-
 /**
  * @author fengz (windywany@gmail.com)
  * @version 1.0.0
  * @since 1.0.0
  **/
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public abstract class Mail<T> implements IMail<T> {
+public interface IMail<T> {
 
-    protected String id;
+    String getId();
 
-    protected String postman;
+    void setId(String id);
 
-    protected String recipients;
+    String getContent();
 
-    protected String title;
+    void setContent(String content);
 
-    protected String service;
+    String getPostman();
 
-    protected String content;
+    void setPostman(String postman);
 
-    @Override
-    public String toString() {
-        return "[" + postman + "] id = " + getId() + ", content = " + content;
-    }
+    String getRecipients();
 
-    public String getId() {
-        if (StringUtils.isBlank(id)) {
-            id = UUID.randomUUID().toString();
-        }
-        return id;
-    }
+    void setRecipients(String recipients);
+
+    String getTitle();
+
+    void setTitle(String title);
+
+    String getService();
+
+    void setService(String service);
+
+    T getBody();
 
 }

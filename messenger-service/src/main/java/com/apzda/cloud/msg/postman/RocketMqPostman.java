@@ -16,7 +16,6 @@
  */
 package com.apzda.cloud.msg.postman;
 
-import com.apzda.cloud.msg.Mail;
 import com.apzda.cloud.msg.Postman;
 import com.apzda.cloud.msg.RocketMail;
 import com.apzda.cloud.msg.mq.RocketMqRateLimiter;
@@ -33,23 +32,25 @@ import java.nio.charset.StandardCharsets;
  * @since 1.0.0
  **/
 @RequiredArgsConstructor
-public class RocketMqPostman implements Postman<String> {
+public class RocketMqPostman implements Postman<String, RocketMail> {
 
     private final RocketMqRateLimiter limiter;
 
     @Override
-    public boolean deliver(@Nonnull Mail<String> message) {
-        if (message instanceof RocketMail rocketMail) {
-            val msg = MessageBuilder.withPayload(message.getContent().getBytes(StandardCharsets.UTF_8)).build();
-            limiter.sendMessage(rocketMail.getRecipients(), msg);
-            return true;
-        }
-        throw new IllegalArgumentException("message is not a RocketMail");
+    public boolean supports(@Nonnull String postman) {
+        return "rocketmq".equals(postman);
+    }
+
+    @Override
+    public boolean deliver(@Nonnull RocketMail message) {
+        val msg = MessageBuilder.withPayload(message.getContent().getBytes(StandardCharsets.UTF_8)).build();
+        limiter.sendMessage(message.getRecipients(), msg);
+        return true;
     }
 
     @Nonnull
     @Override
-    public Mail<String> encapsulate(String id, String postman, String content) {
+    public RocketMail encapsulate(String id, String postman, String content) {
         val mail = new RocketMail();
         mail.setId(id);
         mail.setPostman(postman);

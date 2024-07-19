@@ -17,6 +17,8 @@
 package com.apzda.cloud.msg.config;
 
 import com.apzda.cloud.msg.Postman;
+import com.apzda.cloud.msg.RocketMail;
+import com.apzda.cloud.msg.TextMail;
 import com.apzda.cloud.msg.mq.FixedRateLimiter;
 import com.apzda.cloud.msg.mq.RocketMqRateLimiter;
 import com.apzda.cloud.msg.postman.DemoPostman;
@@ -44,7 +46,7 @@ public class MessengerServiceConfig {
     @Bean
     @ConditionalOnProperty(prefix = "apzda.cloud.postman", name = "demo-enabled", havingValue = "true",
             matchIfMissing = true)
-    Postman<String> demoPostman() {
+    Postman<String, TextMail> demoPostman() {
         return new DemoPostman();
     }
 
@@ -56,7 +58,7 @@ public class MessengerServiceConfig {
 
     @Bean
     @ConditionalOnMissingBean(name = "rocketmqPostman")
-    Postman<String> rocketmqPostman(RocketMqRateLimiter rocketMqRateLimiter) {
+    Postman<String, RocketMail> rocketmqPostman(RocketMqRateLimiter rocketMqRateLimiter) {
         return new RocketMqPostman(rocketMqRateLimiter);
     }
 

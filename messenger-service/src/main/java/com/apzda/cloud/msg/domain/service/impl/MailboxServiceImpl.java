@@ -129,7 +129,6 @@ public class MailboxServiceImpl extends ServiceImpl<MailboxMapper, Mailbox> impl
             }
             return true;
         });
-
     }
 
     @Override
