@@ -18,7 +18,6 @@ package com.apzda.cloud.msg.client;
 
 import cn.hutool.core.exceptions.ExceptionUtil;
 import com.apzda.cloud.msg.IMail;
-import com.apzda.cloud.msg.Mail;
 import com.apzda.cloud.msg.Messenger;
 import com.apzda.cloud.msg.config.MessengerClientProperties;
 import com.apzda.cloud.msg.domain.entity.MailboxTrans;
