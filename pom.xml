@@ -22,7 +22,7 @@
         <module>messenger-client</module>
     </modules>
     <properties>
-        <rocketmq-version>2.3.0</rocketmq-version>
+        <rocketmq-version>2.3.1</rocketmq-version>
     </properties>
 
     <issueManagement>
