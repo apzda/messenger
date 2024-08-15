@@ -27,6 +27,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.TransactionMQProducer;
 import org.apache.rocketmq.common.message.Message;
@@ -197,9 +198,15 @@ public class MessengerImpl implements Messenger, InitializingBean {
     private static Message createMessage(String topic, String postman, String content, MailboxTrans trans) {
         val message = new Message(topic, postman, content.getBytes(StandardCharsets.UTF_8));
         message.putUserProperty("msgId", trans.getMailId());
-        message.putUserProperty("title", trans.getTitle());
-        message.putUserProperty("service", trans.getService());
-        message.putUserProperty("recipients", trans.getRecipients());
+        if (StringUtils.isNotBlank(trans.getTitle())) {
+            message.putUserProperty("title", trans.getTitle());
+        }
+        if (StringUtils.isNotBlank(trans.getService())) {
+            message.putUserProperty("service", trans.getService());
+        }
+        if (StringUtils.isNotBlank(trans.getRecipients())) {
+            message.putUserProperty("recipients", trans.getRecipients());
+        }
         message.putUserProperty("postTime", String.valueOf(trans.getPostTime()));
         return message;
     }
