@@ -67,13 +67,16 @@ public class MessengerImpl implements Messenger, InitializingBean {
 
     private final AtomicInteger atomicInteger = new AtomicInteger(0);
 
+    private final String defaultService;
+
     public MessengerImpl(MessengerClientProperties properties, ObjectProvider<TransactionMQProducer> provider,
-            IMailboxTransService mailboxService, Clock clock) throws MQClientException {
+            IMailboxTransService mailboxService, Clock clock, String defaultService) throws MQClientException {
         this.properties = properties;
         this.mailboxService = mailboxService;
         this.clock = clock;
         this.producer = provider.getIfAvailable();
         this.topic = properties.getTopic();
+        this.defaultService = defaultService;
         Assert.hasText(topic, "[apzda.cloud.messenger.producer.topic] must not be null");
         val executorCount = properties.getExecutorCount();
         executor = new ScheduledThreadPoolExecutor(
@@ -92,7 +95,8 @@ public class MessengerImpl implements Messenger, InitializingBean {
             val delay = properties.getDelay().toSeconds();
             val period = properties.getPeriod().toSeconds();
             for (int i = 0; i < executorCount; i++) {
-                executor.scheduleAtFixedRate(new MailSender(producer, mailboxService, topic, properties, clock),
+                executor.scheduleAtFixedRate(
+                        new MailSender(producer, mailboxService, topic, properties, clock, defaultService),
                         delay > 0 ? delay : 10, period > 0 ? period : 1, TimeUnit.SECONDS);
             }
             log.info("Messenger executor init: count={}, delay={}, period={} ", executorCount, delay, period);
@@ -143,7 +147,7 @@ public class MessengerImpl implements Messenger, InitializingBean {
 
     @Slf4j
     private record MailSender(TransactionMQProducer producer, IMailboxTransService mailboxService, String topic,
-            MessengerClientProperties postmanConfig, Clock clock) implements Runnable {
+            MessengerClientProperties postmanConfig, Clock clock, String defaultService) implements Runnable {
 
         @Override
         public void run() {
@@ -161,6 +165,11 @@ public class MessengerImpl implements Messenger, InitializingBean {
                         Assert.hasText(postman, "postman must not be null");
                         val content = trans.getContent();
                         Assert.hasText(content, "content must not be null");
+
+                        if (StringUtils.isBlank(trans.getService()) && StringUtils.isNotBlank(defaultService)) {
+                            trans.setService(defaultService);
+                        }
+
                         val message = createMessage(topic, postman, content, trans);
                         val result = this.producer.sendMessageInTransaction(message, trans);
                         if (result == null) {

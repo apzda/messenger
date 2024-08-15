@@ -34,6 +34,7 @@ import org.apache.rocketmq.spring.autoconfigure.RocketMQProperties;
 import org.apache.rocketmq.spring.support.RocketMQUtil;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -62,10 +63,13 @@ import static org.apache.commons.lang3.StringUtils.defaultIfBlank;
 @Slf4j
 public class MessengerClientAutoConfiguration {
 
+    @Value("${spring.application.name:}")
+    private String defaultService;
+
     @Bean
     Messenger messengerImpl(MessengerClientProperties properties, IMailboxTransService mailboxService, Clock clock,
             ObjectProvider<TransactionMQProducer> provider) throws MQClientException {
-        return new MessengerImpl(properties, provider, mailboxService, clock);
+        return new MessengerImpl(properties, provider, mailboxService, clock, defaultService);
     }
 
     @Bean(destroyMethod = "shutdown")
