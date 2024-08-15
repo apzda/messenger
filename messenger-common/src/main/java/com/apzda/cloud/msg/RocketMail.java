@@ -52,4 +52,16 @@ public class RocketMail extends Mail<String> {
         return getContent();
     }
 
+    @Override
+    public void setPostman(String postman) {
+        if ("rocketmq".equals(postman)) {
+            super.setPostman("rocketmq");
+        }
+    }
+
+    @Override
+    public String getPostman() {
+        return "rocketmq";
+    }
+
 }
