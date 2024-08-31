@@ -16,13 +16,21 @@ import org.junit.jupiter.api.Test;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.jdbc.Sql;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.utility.DockerImageName;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,13 +47,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ComponentScan({ "com.apzda.cloud.msg.domain.service", "com.apzda.cloud.msg.service", "com.apzda.cloud.msg.converter" })
 @MapperScan("com.apzda.cloud.msg.domain.mapper")
 @EnableConfigurationProperties({ MessengerServiceProperties.class, ServiceConfigProperties.class })
+@Sql(value = "classpath:/mailbox.sql", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_CLASS)
 class MessengerServiceImplTest {
 
     @Autowired
     private MessengerService messengerService;
 
     @Test
-    @Sql(value = "classpath:/mailbox.sql")
     void query_desc() {
         // given
         val pageRequest = PageRequest.of(0, 2, Sort.by(Sort.Order.desc("msg_id")));
@@ -70,7 +78,6 @@ class MessengerServiceImplTest {
     }
 
     @Test
-    @Sql(value = "classpath:/mailbox.sql")
     void query_asc() {
         // given
         val pageRequest = PageRequest.of(1, 2, Sort.by(Sort.Order.asc("msg_id")));
@@ -118,6 +125,21 @@ class MessengerServiceImplTest {
         assertThat(res.getDictCount()).isEqualTo(5);
         assertThat(res.getDictList())
             .contains(GsvcExt.KeyValue.newBuilder().setKey("PENDING").setValue("PENDING").build());
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    @ConditionalOnProperty(name = "skip.container", havingValue = "no", matchIfMissing = true)
+    static class TestConfig {
+
+        @Bean
+        @ServiceConnection
+        MySQLContainer<?> mysql() {
+            return new MySQLContainer<>(DockerImageName.parse("mysql:8.0.35")).withDatabaseName("demo_db")
+                .withUsername("root")
+                .withPassword("Abc12332!")
+                .withStartupTimeout(Duration.ofMinutes(3));
+        }
+
     }
 
 }

@@ -12,9 +12,17 @@ import org.apache.rocketmq.spring.autoconfigure.RocketMQAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.Commit;
 import org.springframework.test.context.ContextConfiguration;
+import org.testcontainers.containers.MySQLContainer;
+import org.testcontainers.utility.DockerImageName;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -53,6 +61,22 @@ class MessengerImplTest {
         // then
         assertThat(trans).isNotEmpty();
         assertThat(trans.size()).isEqualTo(1);
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    @ConditionalOnProperty(name = "skip.container", havingValue = "no", matchIfMissing = true)
+    static class TestConfig {
+
+        @Bean
+        @ServiceConnection
+        MySQLContainer<?> mysql() {
+            return new MySQLContainer<>(DockerImageName.parse("mysql:8.0.35"))
+                .withDatabaseName("demo_db")
+                .withUsername("root")
+                .withPassword("Abc12332!")
+                .withStartupTimeout(Duration.ofMinutes(3));
+        }
+
     }
 
 }
